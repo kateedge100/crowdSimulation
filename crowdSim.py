@@ -5,6 +5,7 @@ import random as rand
 import math as math
 
 
+
 class Agent:
      # contructor
      def __init__(self, id, sphereRadius):
@@ -17,7 +18,9 @@ class Agent:
          cmds.move(self.position[0], self.position[1], self.position[2], id)
          
      def distanceToAgent(self, Agent):
-         distance = sqrt((self.position[0]-Agent.position[0])^2 + (self.position[1]-Agent.position[1])^2 + (self.position[2]-Agent.position[2])^2)
+         print Agent.id
+         print Agent.position[0]
+         distance = math.sqrt((self.position[0]-Agent.position[0])*(self.position[0]-Agent.position[0]) + (self.position[1]-Agent.position[1])*(self.position[1]-Agent.position[1]) + (self.position[2]-Agent.position[2])*(self.position[2]-Agent.position[2]))
         
          
          
@@ -49,9 +52,9 @@ class Scene:
 	            self.agentArray[j].position[1] += self.agentArray[j].velocity[1]
 	            self.agentArray[j].position[2] += self.agentArray[j].velocity[2]
 	            
-	            collisionWithBalls(self.agents, ballRadius, self.agentArray)
+	            self.collisionWithBalls(self.agents, ballRadius, self.agentArray)
 	            
-	            compute = computeAlignment(self, j)
+	            compute = self.computeAlignment( self.agentArray[j])
 	            self.agentArray[j].velocity[0] += compute[0]
 	            self.agentArray[j].velocity[1] += compute[1]
 	            self.agentArray[j].velocity[2] += compute[2]
@@ -64,7 +67,7 @@ class Scene:
         
 		
     # Taken from Xiasongs code found at https://mybu.bournemouth.ac.uk/webapps/blackboard/content/listContent.jsp?course_id=_52391_1&content_id=_1420295_1&mode=reset	        
-    def collisionWithBalls(numOfBalls, ballRadius, ballArray):
+    def collisionWithBalls(self, numOfBalls, ballRadius, ballArray):
     	for i in range(numOfBalls-1):
     		for j in range(i+1, numOfBalls):
     			# checking the collision between ball I and J
@@ -80,9 +83,9 @@ class Scene:
     				if temp<0.0:
     					print "something wrong with the calculation"
     					continue
-    				t1 = (-dotProduct(A, B)+math.sqrt(temp))/(dotProduct(B, B) * dotProduct(B, B))
-    				t2 = (-dotProduct(A, B)-math.sqrt(temp))/(dotProduct(B, B) * dotProduct(B, B))
-    				t = findTheRightT(t1, t2)
+    				t1 = (-dotProduct(A, B)+ math.sqrt(temp))/(dotProduct(B, B) * dotProduct(B, B))
+    				t2 = (-dotProduct(A, B)- math.sqrt(temp))/(dotProduct(B, B) * dotProduct(B, B))
+    				t = self.findTheRightT(t1, t2)
     				Pt = [Pc[0]-(1-t)*Vp[0], Pc[1]-(1-t)*Vp[1], Pc[2]-(1-t)*Vp[2]]
     				Qt = [Qc[0]-(1-t)*Vq[0], Qc[1]-(1-t)*Vq[1], Qc[2]-(1-t)*Vq[2]]
     				N = [Qt[0]-Pt[0], Qt[1]-Pt[1], Qt[2]-Pt[2]]
@@ -98,32 +101,47 @@ class Scene:
     				ballArray[i].velocity[0] = Vp1[0];ballArray[i].velocity[1] = Vp1[1];ballArray[i].velocity[2] = Vp1[2]
     				ballArray[j].velocity[0] = Vq1[0];ballArray[j].velocity[1] = Vq1[1];ballArray[j].velocity[2] = Vq1[2]
     				
-    	def computeAlignment(self, currentAgent):
-    	    numberOfNeighbours = 0
-    	    alignmentVector = [0,0,0]
+    def computeAlignment(self, currentAgent):
+        numberOfNeighbours = 0
+    	alignmentVector = [0,0,0]
     	    
-    	    for agent in range(self.agentArray):
-    	        if agent != currentAgent:
-    	            if currentAgent.distanceToAgent(agent) < 4:
-    	                alignmentVector[0] += agent.velocity[0]    	                
-    	                alignmentVector[2] += agent.velocity[2]
+    	for agent in self.agentArray:
+    	    print agent.id
+    	    print agent.distanceToAgent(currentAgent)
+    	    if agent != currentAgent:
+    	        if currentAgent.distanceToAgent(agent) < 4:
+    	            alignmentVector[0] += agent.velocity[0]    	                
+    	            alignmentVector[2] += agent.velocity[2]
     	                
-    	                numberOfNeighbours += 1
+    	            numberOfNeighbours += 1
     	                
-    	    alignmentVector[0] /= numberOfNeighbours
-    	    alignmentVector[2] /= numberOfNeighbours
-    	    alignmentVector = normalize(alignmentVector)
+    	alignmentVector[0] /= numberOfNeighbours
+    	alignmentVector[2] /= numberOfNeighbours
+    	alignmentVector = normalize(alignmentVector)
     	               
-    	    return alignmentVector
+    	return alignmentVector
+    	
+    def findTheRightT(self, t1, t2):
+	    if 0.0<t1<1.0:
+		    return t1
+	    elif 0.0<t2<1.0:
+		    return t2
+	    else:
+		    print "none of the T value in the range [0, 1]", t1, t2
+		    return t1 #theory not right
     	    
-    	    
-
-def normalize(vector):
-    normVector = sqrt((vector[0] + vector[0])^2 + (vector[1] + vector[1])^2 + (vector[2] + vector[2])^2)
-    return normVector
-            
-        
-         
+def normalizeVector(v):
+	sum = 0.0
+	for i in range(len(v)):
+		sum +=v[i]*v[i]
+	sum = math.sqrt(sum)
+	for i in range(len(v)):
+		v[i]/=sum
+	return v
+    
+def dotProduct(V1, V2):
+	return V1[0]*V2[0]+V1[1]*V2[1]+V1[2]*V2[2]
+                  
 if __name__ == "__main__":
   
     cmds.select(all=True)
@@ -137,10 +155,15 @@ if __name__ == "__main__":
     scene.populateScene()
     
     scene.simulation(boisRadius, scene.agentArray)
-
-          
     
-	
-  
-        
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
     
