@@ -10,28 +10,40 @@ PI = 3.14159
 
 class Agent:
      # contructor
-     def __init__(self, id, sphereRadius):
+     def __init__(self, id, radius, predatorBool):
          # allows spawning in -1 - 1 rather the 0 - 1
-         self.position = [(rand.random()- rand.random())*10,sphereRadius, (rand.random()- rand.random())*10]
+         self.position = [(rand.random()- rand.random())*10,radius, (rand.random()- rand.random())*10]
          self.velocity = [rand.random()/40, 0, rand.random()/40]
-         self.oldVelocity = self.velocity # used for orientation
+         self.oldVelocity = [0,0,1] # used for orientation
          self.rotation = [0,0,0]
+         self.acceleration = [0,0,0]
          self.id = id
+         self.predator = predatorBool
+         
+        
+         
+         self.flockFlag = False
          
          #cmds.sphere(n = id, r = sphereRadius)
-         cmds.polyCone(n = id, r = sphereRadius, h = 0.8, axis = (0,0,1))
+         cmds.polyCone(n = id, r = radius, h = 0.8, axis = (0,0,1))
          cmds.move(self.position[0], self.position[1], self.position[2], id)
          
          # cones are created with correct orientation
-         self.updateRotation
+         #self.updateRotation
          
      def distanceToAgent(self, Agent):
          distance = math.sqrt((self.position[0]-Agent.position[0])*(self.position[0]-Agent.position[0]) + (self.position[2]-Agent.position[2])*(self.position[2]-Agent.position[2]))
+         
+         return distance
+        
+        
      
      def updateRotation(self):
-         #print self.oldVelocity
-         #print self.velocity
+         #print self.oldVelocity[0]
+         #print self.velocity[0]
          if self.oldVelocity != self.velocity:
+             
+             #print 'Rotating'
              mag1 = vectorMagnitude(self.velocity)
              mag2 = vectorMagnitude(self.oldVelocity)
              
@@ -39,25 +51,37 @@ class Agent:
              
              steer = steer * (180/PI)
              
-             print self.rotation[1]
+             #print steer
+             
+             #print self.rotation[1]
              self.rotation[1] = self.rotation[1] + steer 
-             print self.rotation[1]
+             #print self.rotation[1]
              
-         else:
-             print 'no change in velocity'
-             
+         #else:
+             #print 'no change in velocity'
+                 
          
          
 class Scene:
-    def __init__(self, agents):
-        self.agents = agents
+    def __init__(self, preyAgents, predatorAgents):
+        self.preyAgents = preyAgents
+        self.predatorAgents = predatorAgents
+        self.agents = self.preyAgents + self.predatorAgents
         self.agentArray = []
         
+        self.preyMaxSpeed = 1
         
-    def populateScene(self):               
-        for i in range(0,self.agents):
-            currentAgent = Agent("agent" + str(i), 0.2)
+        
+    def populateScene(self):  
+        #init prey             
+        for i in range(0,self.preyAgents):
+            currentAgent = Agent("agentPrey" + str(i), 0.2, False)
             self.agentArray.append(currentAgent)
+        # init predators
+        for i in range(0,self.predatorAgents):
+            currentAgent = Agent("agentPredator" + str(i), 0.2, True)
+            self.agentArray.append(currentAgent)
+            
         cmds.group("agent*", name = "Agents")
         cmds.select(self.agentArray[0].id)    
        
@@ -69,25 +93,22 @@ class Scene:
             for j in range(self.agents): 
               
                 self.agentArray[j].oldVelocity = self.agentArray[j].velocity[:] 
+                
+               # if self.agentArray[j].predator == True:
+                    #self.detectPredator(self.agentArray[j])
+               
+                    
+                    
+                
                   
+                #if self.agentArray[j].flockFlag == True:
+                    #self.flock(self.agentArray[j])
                 
-                alignment = self.computeAlignment(self.agentArray[j])
-                cohesion = self.computeCohesion(self.agentArray[j])
-                separation = self.computeSeperation(self.agentArray[j])
+                #if self.agentArray[j].predator == False:            
+                self.flock(self.agentArray[j])
                 
-                alignmentWeight = 1
-                cohesionWeight = 1
-                separationWeight = 1
                 
-                #self.agentArray[j].velocity[0] += alignment[0] + cohesion[0] + separation[0]
-                #self.agentArray[j].velocity[2] += alignment[2] + cohesion[2] + separation[2]
                 
-                self.agentArray[j].velocity[0] += alignment[0] * alignmentWeight + cohesion[0] * cohesionWeight + separation[0] * separationWeight;
-                self.agentArray[j].velocity[2] += alignment[2] * alignmentWeight + cohesion[2] * cohesionWeight + separation[2] * separationWeight;
-                
-                self.agentArray[j].velocity = normalizeVector(self.agentArray[j].velocity)                   
-                
-                agentArray[j].updateRotation()
                 
                                             
                 #UPDATE ROTATION BASED ON DIRECTION OF VELOCITY  
@@ -98,54 +119,47 @@ class Scene:
                 cmds.setKeyframe(self.agentArray[j].id, attribute="tx", v=self.agentArray[j].position[0], t=[i], inTangentType="spline", outTangentType="spline")
                 cmds.setKeyframe(self.agentArray[j].id, attribute="ty", v=self.agentArray[j].position[1], t=[i], inTangentType="spline", outTangentType="spline")
                 cmds.setKeyframe(self.agentArray[j].id, attribute="tz", v=self.agentArray[j].position[2], t=[i], inTangentType="spline", outTangentType="spline")
+	            
+	            
+	            # UPDATING VELOCITY, POSITION AND ROTATION
+                # update velocity based on acceleration
+
+                #self.agentArray[j].velocity[0] += self.agentArray[j].acceleration[0]
+                #self.agentArray[j].velocity[2] += self.agentArray[j].acceleration[2]
+	             
 	            # update the position of all the balls following their current velocity
                 self.agentArray[j].position[0] += self.agentArray[j].velocity[0]
                 self.agentArray[j].position[1] += self.agentArray[j].velocity[1]
                 self.agentArray[j].position[2] += self.agentArray[j].velocity[2]
                 
+                #self.agentArray[j].updateRotation()
                 
-                
-                #self.collisionWithBalls(self.agents, ballRadius, self.agentArray)
-	            
+                #print self.agentArray[j].oldVelocity
+                #print self.agentArray[j].velocity
+             	            
                  	            	        
                 for j in range(self.agents):
                     cmds.move(agentArray[j].position[0], agentArray[j].position[1], agentArray[j].position[2], agentArray[j].id)
 
-       		
-    # Taken from Xiasongs code found at https://mybu.bournemouth.ac.uk/webapps/blackboard/content/listContent.jsp?course_id=_52391_1&content_id=_1420295_1&mode=reset	        
-    def collisionWithBalls(self, numOfBalls, ballRadius, ballArray):
-    	for i in range(numOfBalls-1):
-    		for j in range(i+1, numOfBalls):
-    			# checking the collision between ball I and J
-    			Pc = [ballArray[i].position[0], ballArray[i].position[1], ballArray[i].position[2]]
-    			Qc = [ballArray[j].position[0], ballArray[j].position[1], ballArray[j].position[2]]
-    			Vp = [ballArray[i].velocity[0], ballArray[i].velocity[1], ballArray[i].velocity[2]]
-    			Vq = [ballArray[j].velocity[0], ballArray[j].velocity[1], ballArray[j].velocity[2]]
-    			Vpq = [Pc[0]-Qc[0], Pc[1]-Qc[1], Pc[2]-Qc[2]]
-    			if dotProduct(Vpq,Vpq)<4*ballRadius*ballRadius:
-    				A = [Pc[0]-Vp[0]-Qc[0]+Vq[0], Pc[1]-Vp[1]-Qc[1]+Vq[1], Pc[2]-Vp[2]-Qc[2]+Vq[2]]
-    				B = [Vp[0]-Vq[0], Vp[1]-Vq[1], Vp[2]-Vq[2]]
-    				temp = dotProduct(A, B)*dotProduct(A, B)-dotProduct(B, B)*dotProduct(B, B)*(dotProduct(A, A)-ballRadius*ballRadius*4)
-    				if temp<0.0:
-    					print "something wrong with the calculation"
-    					continue
-    				t1 = (-dotProduct(A, B)+ math.sqrt(temp))/(dotProduct(B, B) * dotProduct(B, B))
-    				t2 = (-dotProduct(A, B)- math.sqrt(temp))/(dotProduct(B, B) * dotProduct(B, B))
-    				t = self.findTheRightT(t1, t2)
-    				Pt = [Pc[0]-(1-t)*Vp[0], Pc[1]-(1-t)*Vp[1], Pc[2]-(1-t)*Vp[2]]
-    				Qt = [Qc[0]-(1-t)*Vq[0], Qc[1]-(1-t)*Vq[1], Qc[2]-(1-t)*Vq[2]]
-    				N = [Qt[0]-Pt[0], Qt[1]-Pt[1], Qt[2]-Pt[2]]
-    				N = normalizeVector(N)
-    				VpDotN = dotProduct(Vp, N)
-    				VqDotN = dotProduct(Vq, N) 
-    				Vp1 = [Vp[0]-VpDotN*N[0]+VqDotN*N[0], Vp[1]-VpDotN*N[1]+VqDotN*N[1], Vp[2]-VpDotN*N[2]+VqDotN*N[2]]
-    				Vq1 = [Vq[0]-VqDotN*N[0]+VpDotN*N[0], Vq[1]-VqDotN*N[1]+VpDotN*N[1], Vq[2]-VqDotN*N[2]+VpDotN*N[2]]
-    				Pc1 = [Pt[0]+Vp1[0]*(1-t), Pt[1]+Vp1[1]*(1-t), Pt[2]+Vp1[2]*(1-t)]
-    				Qc1 = [Qt[0]+Vq1[0]*(1-t), Qt[1]+Vq1[1]*(1-t), Qt[2]+Vq1[2]*(1-t)]
-    				ballArray[i].position[0] = Pc1[0];ballArray[i].position[1] = Pc1[1];ballArray[i].position[2] = Pc1[2]
-    				ballArray[j].position[0] = Qc1[0];ballArray[j].position[1] = Qc1[1];ballArray[j].position[2] = Qc1[2]
-    				ballArray[i].velocity[0] = Vp1[0];ballArray[i].velocity[1] = Vp1[1];ballArray[i].velocity[2] = Vp1[2]
-    				ballArray[j].velocity[0] = Vq1[0];ballArray[j].velocity[1] = Vq1[1];ballArray[j].velocity[2] = Vq1[2]
+  		
+    def flock(self, currentAgent):
+         alignment = self.computeAlignment(currentAgent)
+         cohesion = self.computeCohesion(currentAgent)
+         separation = self.computeSeperation(currentAgent)
+        
+         alignmentWeight = 1
+         cohesionWeight = 1 
+         separationWeight = 1
+        
+         #self.agentArray[j].velocity[0] += alignment[0] + cohesion[0] + separation[0]
+         #self.agentArray[j].velocity[2] += alignment[2] + cohesion[2] + separation[2]
+        
+         currentAgent.velocity[0] += (cohesion[0] * cohesionWeight) + (alignment[0] * alignmentWeight) + (separation[0] * separationWeight);
+         currentAgent.velocity[2] += (cohesion[2] * cohesionWeight) + (alignment[2] * alignmentWeight) + (separation[2] * separationWeight);
+        
+         currentAgent.velocity = normalizeVector(currentAgent.velocity) 
+         
+            
     				
     def computeAlignment(self, currentAgent):
         numberOfNeighbours = 0
@@ -153,16 +167,26 @@ class Scene:
     	    
     	for agent in self.agentArray:
     	    if agent != currentAgent:
-    	        if currentAgent.distanceToAgent(agent) < 4:
+    	        if currentAgent.distanceToAgent(agent) < 2:
     	            alignmentVector[0] += agent.velocity[0]
     	            # ignore y axis    	                
     	            alignmentVector[2] += agent.velocity[2]
     	                
     	            numberOfNeighbours += 1
-    	                
-    	alignmentVector[0] /= numberOfNeighbours
-    	alignmentVector[2] /= numberOfNeighbours
-    	alignmentVector = normalizeVector(alignmentVector)
+    	# avoid dividing by zero
+        if numberOfNeighbours != 0:
+            
+                
+            alignmentVector[0] /= numberOfNeighbours
+            alignmentVector[2] /= numberOfNeighbours
+        	
+           
+            alignmentVector = normalizeVector(alignmentVector)
+            
+            #steer
+            alignmentVector[0]= alignmentVector[0] - currentAgent.velocity[0]
+            alignmentVector[2]= alignmentVector[2] - currentAgent.velocity[2]
+          
     	               
     	return alignmentVector
     	
@@ -172,20 +196,30 @@ class Scene:
     	    
     	for agent in self.agentArray:
     	    if agent != currentAgent:
-    	        if currentAgent.distanceToAgent(agent) < 15:
+    	        if currentAgent.distanceToAgent(agent) < 5:
     	            cohesionVector[0] += agent.position[0]
     	            # ignore y axis    	                
     	            cohesionVector[2] += agent.position[2]
     	                
     	            numberOfNeighbours += 1
-    	                
-    	cohesionVector[0] /= numberOfNeighbours
-    	cohesionVector[2] /= numberOfNeighbours
-    	cohesionVector[0] = (cohesionVector[0] - agent.position[0])
-    	cohesionVector[2] = (cohesionVector[2] - agent.position[2])
-    	cohesionVector = normalizeVector(cohesionVector)
+    	# avoid dividing by zero
+        if numberOfNeighbours != 0:                
+            cohesionVector[0] /= numberOfNeighbours
+            cohesionVector[2] /= numberOfNeighbours
+        	
+            
+            cohesionVector[0] = (agent.position[0] - cohesionVector[0])
+            cohesionVector[2] = (agent.position[2] - cohesionVector[2])
+            
+            cohesionVector = normalizeVector(cohesionVector)
+            
+            #steer
+            cohesionVector[0]= cohesionVector[0] - currentAgent.velocity[0]
+            cohesionVector[2]= cohesionVector[2] - currentAgent.velocity[2]
+            
+          
     	               
-    	return cohesionVector
+        return cohesionVector
     	
     def computeSeperation(self, currentAgent):
         numberOfNeighbours = 0
@@ -193,23 +227,65 @@ class Scene:
     	    
         for agent in self.agentArray:
             if agent != currentAgent:
-                if currentAgent.distanceToAgent(agent) < 0.5:
+                if currentAgent.distanceToAgent(agent) <1.0:
                     seperationVector[0] += agent.position[0]-currentAgent.position[0]
                     # ignore y axis    	                
                     seperationVector[2] += agent.position[2]-currentAgent.position[2]
-                        
+                    
+                    seperationVector = normalizeVector(seperationVector)
+                    
+                    # -2 so that distance is zero at edge of cone
+                    seperationVector[0] /= (currentAgent.distanceToAgent(agent)-0.2)
+                    seperationVector[2] /= (currentAgent.distanceToAgent(agent)-0.2)   
+                    
                     numberOfNeighbours += 1
-                        
-        seperationVector[0] /= numberOfNeighbours
-        seperationVector[2] /= numberOfNeighbours
-        seperationVector[0] *= -1;
-        seperationVector[2] *= -1;
+        # avoid dividing by zero
+        if numberOfNeighbours != 0:               
+            seperationVector[0] /= numberOfNeighbours
+            seperationVector[2] /= numberOfNeighbours
+            seperationVector[0] *= -1;
+            seperationVector[2] *= -1;
         
-        seperationVector = normalizeVector(seperationVector)
+            seperationVector = normalizeVector(seperationVector)
+            
+            #steer
+            seperationVector[0]= seperationVector[0] - currentAgent.velocity[0]
+            seperationVector[2]= seperationVector[2] - currentAgent.velocity[2]
+            
+            
                        
         return seperationVector
         
-    	
+    def detectPredator(self, currentPredator):
+        for agent in self.agentArray:
+            if agent.predator == False:
+                if currentPredator.distanceToAgent(agent) < 5:
+                    agent.flockFlag = True
+                    fleeVector = [0,0,0]
+                    
+                
+                    
+                    fleeVector[0] = -(currentPredator.position[0] - agent.position[0])
+                    fleeVector[2] = -(currentPredator.position[2] - agent.position[2])
+                    
+                    normalizeVector(fleeVector)
+                    
+                    self.steer(agent,fleeVector)
+                    
+                    #dist = currentPredator.distanceToAgent(agent)
+                   # print 'Distance'
+                    #print dist
+                    #print 'Flag'
+                    #print agent.flockFlag
+        
+    def steer(self, currentAgent, target):
+        steer = [0,0,0]
+        steer[0] = target[0] - currentAgent.velocity[0]
+        steer[2] = target[2] - currentAgent.velocity[2]
+                    
+        currentAgent.velocity[0] += steer[0]
+        currentAgent.velocity[2] += steer[2]
+                    	
     def findTheRightT(self, t1, t2):
 	    if 0.0<t1<1.0:
 		    return t1
@@ -230,7 +306,8 @@ def vectorMagnitude(v):
 def normalizeVector(v):
     sum = vectorMagnitude(v)
     for i in range(len(v)):
-        v[i]/=sum
+        if sum !=0:
+            v[i]/=sum
     return v
     
 def dotProduct(V1, V2):
@@ -241,11 +318,14 @@ if __name__ == "__main__":
     cmds.select(all=True)
     cmds.delete()
     
-    numberOfBois = 50
+    numberOfPrey = 20
+    numberOfPredators = 1
+    
     boisRadius = 0.2
     
-    scene = Scene(numberOfBois)  
+    scene = Scene(numberOfPrey, numberOfPredators )  
     
     scene.populateScene()
     
     scene.simulation(boisRadius, scene.agentArray)
+    
