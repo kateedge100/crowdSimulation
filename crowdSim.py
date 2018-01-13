@@ -46,26 +46,27 @@ class Agent:
         
      
      def updateRotation(self):
-         #print self.oldVelocity[0]
-         #print self.velocity[0]
-         if self.oldVelocity != self.velocity:
-             
-             #print 'Rotating'
-             mag1 = vectorMagnitude(self.velocity)
-             mag2 = vectorMagnitude(self.oldVelocity)
-             
-             steer = math.acos(dotProduct(self.oldVelocity, self.velocity)/(mag1 * mag2))
-             
+         
+  
+         
+         # rotation 0 when facing in z axis
+         facing = [0,0,1]       
+         
+         #only update if moving             
+         if self.velocity != [0,0,0]:    
+                 
+             steer = math.acos(dotProduct(facing, self.velocity))
+           
              steer = steer * (180/PI)
              
-             #print steer
-             
-             #print self.rotation[1]
-             self.rotation[1] = self.rotation[1] + steer 
-             #print self.rotation[1]
-             
-         #else:
-             #print 'no change in velocity'
+              
+             diff = self.rotation[1] - steer
+               
+             if self.velocity[0]>0:
+                 self.rotation[1] = steer
+             else:
+                 self.rotation[1]= 360-steer
+
                  
          
          
@@ -193,7 +194,8 @@ class Scene:
                 self.agentArray[j].position[1] += self.agentArray[j].velocity[1]
                 self.agentArray[j].position[2] += self.agentArray[j].velocity[2]
                 
-                #self.agentArray[j].updateRotation()
+                #if self.agentArray[j].flockFlag == True or self.agentArray[j].predator == True:                 
+                self.agentArray[j].updateRotation()
                 
                 #print self.agentArray[j].oldVelocity
                 #print self.agentArray[j].velocity
@@ -440,8 +442,10 @@ class Scene:
                                         	
 
 def vectorMagnitude(v):
+ 
     sum = 0.0
     for i in range(len(v)):
+
         sum +=v[i]*v[i]
     sum = math.sqrt(sum)
 	
