@@ -12,14 +12,16 @@ class Agent:
      # contructor
      def __init__(self, id, radius, predatorBool):
          
+         self.radius = radius
          # allows spawning in -1 - 1 rather the 0 - 1
-         self.position = [(rand.random()- rand.random())*20,radius, (rand.random()- rand.random())*20]
+         self.position = [(rand.random()- rand.random())*20,self.radius, (rand.random()- rand.random())*20]
          self.velocity = [0, 0, 0]
          self.oldVelocity = [0,0,1] # used for orientation
          self.rotation = [0,0,0]
          self.acceleration = [0,0,0]
          self.id = id
          self.predator = predatorBool
+         
          
          self.maxSpeed = 1      
          
@@ -33,7 +35,7 @@ class Agent:
              self.position = [-20,0.2,25]
          
 
-         cmds.polyCone(n = id, r = radius, h = 0.8, axis = (0,0,1))
+         cmds.polyCone(n = id, r = self.radius, h = 0.8, axis = (0,0,1))
          
          # cones are created with correct orientation
          #self.updateRotation
@@ -43,7 +45,18 @@ class Agent:
          
          return distance
         
-        
+     def limitVel(self, limit):
+         velLim = limit
+         newVelocity = [0,0,0]
+         
+         if vectorMagnitude(self.velocity) > velLim:
+             newVelocity[0] = (self.velocity[0]/vectorMagnitude(self.velocity))*velLim
+             newVelocity[2] = (self.velocity[2]/vectorMagnitude(self.velocity))*velLim
+             
+             self.velocity = newVelocity
+         
+      
+           
      
      def updateRotation(self):
          
@@ -62,6 +75,7 @@ class Agent:
               
              diff = self.rotation[1] - steer
                
+             # if rotation past 180 degrees must take away from 360 
              if self.velocity[0]>0:
                  self.rotation[1] = steer
              else:
@@ -97,7 +111,11 @@ class Scene:
             self.predatorArray.append(currentAgent)
             
         cmds.group("agent*", name = "Agents")
-        cmds.select(self.predatorArray[0].id)    
+        
+        if self.predatorAgents != 0:
+            cmds.select(self.predatorArray[0].id)
+        else:
+            cmds.select(self.preyArray[0].id)   
        
         
     def simulation(self, ballRadius, agentArray):
@@ -107,6 +125,8 @@ class Scene:
             for j in range(self.agents): 
               
                 self.agentArray[j].oldVelocity = self.agentArray[j].velocity[:] 
+                
+                
                 
                 # detects prey in range of predator and sets flag
                 if self.agentArray[j].predator == True:
@@ -160,6 +180,8 @@ class Scene:
                     self.flock(self.agentArray[j])
                     # if prey flocking it can alert surrounding prey to predator    
                     self.alertPrey(self.agentArray[j])
+                elif self.agentArray[j].flockFlag == False and  self.agentArray[j].predator == False:
+                    self.idlePrey(self.agentArray[j])
                 
                 
                 
@@ -204,6 +226,8 @@ class Scene:
                 #for j in range(self.agents):
                     #cmds.move(agentArray[j].position[0], agentArray[j].position[1], agentArray[j].position[2], agentArray[j].id)
 
+  	
+  	
   		
     def flock(self, currentAgent):
         
@@ -437,6 +461,56 @@ class Scene:
                     
                     prey.detectedPredator = currentPrey.detectedPredator
                     
+    def idlePrey(self, currentAgent):
+        target = [0,0,0]
+        targetDist = 2
+        targetRadius = 0.3
+        angle = rand.random()*5.0
+
+        #target a point targetDist ahead of the prey
+        target[0] = currentAgent.position[0] + (currentAgent.velocity[0]*targetDist)
+        target[1] = 0
+        target[2] = currentAgent.position[2] + (currentAgent.velocity[2]*targetDist)
+
+        
+        #pick taarget as random point on circumference
+        target[0] = target[0] + targetRadius * math.cos(angle)
+        target[2] = target[2] + targetRadius * math.sin(angle)
+ 
+        # pick random goal position
+        goalPos = target
+         
+  	    
+        goalPos[0] = goalPos[0] - currentAgent.position[0]
+        goalPos[2] = goalPos[2] - currentAgent.position[2]
+
+        goalPos = normalizeVector(goalPos)
+
+        steer = self.steer(currentAgent, goalPos)
+
+        currentAgent.velocity[0] += steer[0] *0.5
+        currentAgent.velocity[2] += steer[2] *0.5
+
+        currentAgent.velocity = normalizeVector(currentAgent.velocity)
+        
+        
+        
+        seperationVector = [0,0,0]
+        
+        seperationVector = self.computeSeperation(currentAgent)
+        
+        steer = self.steer(currentAgent, seperationVector)
+        
+        currentAgent.velocity += steer
+        
+        currentAgent.velocity = normalizeVector(currentAgent.velocity)
+        
+        currentAgent.limitVel(0.3)
+        #currentAgent.velocity = normalizeVector(currentAgent.velocity)
+        
+        
+    
+              
         
             
                                         	
@@ -466,7 +540,7 @@ if __name__ == "__main__":
     cmds.select(all=True)
     cmds.delete()
     
-    numberOfPrey = 100
+    numberOfPrey = 60
     numberOfPredators = 1
     
     boidsRadius = 0.2
