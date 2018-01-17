@@ -1,4 +1,4 @@
-# Simualtions Script
+8# Simualtions Script
 
 import maya.cmds as cmds
 import random as rand
@@ -495,17 +495,46 @@ class Scene:
         
         
         
+        numberOfNeighbours = 0
         seperationVector = [0,0,0]
+    	  
+        for agent in self.preyArray:
+            if agent != currentAgent:               
+                if currentAgent.distanceToAgent(agent) <2.0:
+                    
+                    seperationVector[0] += agent.position[0]-currentAgent.position[0]
+                    # ignore y axis    	                
+                    seperationVector[2] += agent.position[2]-currentAgent.position[2]
+                    
+                    seperationVector = normalizeVector(seperationVector)
+                    
+                    # -2 so that distance is zero at edge of cone
+                    seperationVector[0] /= (currentAgent.distanceToAgent(agent)-0.4)
+                    seperationVector[2] /= (currentAgent.distanceToAgent(agent)-0.4)   
+                    
+                    numberOfNeighbours += 1
         
-        seperationVector = self.computeSeperation(currentAgent)
+        # avoid dividing by zero
+        if numberOfNeighbours != 0:               
+            seperationVector[0] /= numberOfNeighbours
+            seperationVector[2] /= numberOfNeighbours
+            seperationVector[0] *= -1;
+            seperationVector[2] *= -1;
         
-        steer = self.steer(currentAgent, seperationVector)
+            seperationVector = normalizeVector(seperationVector)
+            
+           
+            steer = self.steer(currentAgent, seperationVector)           
+            
+            currentAgent.velocity += steer*2
         
-        currentAgent.velocity += steer
+            currentAgent.velocity = normalizeVector(currentAgent.velocity)
         
-        currentAgent.velocity = normalizeVector(currentAgent.velocity)
+        currentAgent.limitVel(0.2)
         
-        currentAgent.limitVel(0.3)
+        
+        
+        
         #currentAgent.velocity = normalizeVector(currentAgent.velocity)
         
         
