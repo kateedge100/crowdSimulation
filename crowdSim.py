@@ -114,7 +114,7 @@ class Agent:
          
          
 class Scene:
-    def __init__(self, preyAgents, predatorAgents):
+    def __init__(self, preyAgents, predatorAgents, wanderBool):
         self.preyAgents = preyAgents
         self.predatorAgents = predatorAgents
         self.agents = self.preyAgents + self.predatorAgents
@@ -122,6 +122,8 @@ class Scene:
         
         self.preyArray = []
         self.predatorArray = []
+        
+        self.wander = wanderBool
         
         #target = cmds.polyCube(n = 'target')
        
@@ -148,7 +150,7 @@ class Scene:
        
         
     def simulation(self, ballRadius, agentArray):
-        maxFrame = 80
+        maxFrame = 120
         cmds.playbackOptions(minTime=1, maxTime = maxFrame, animationStartTime=1, animationEndTime = maxFrame)
         for i in range(1, maxFrame+1):
             for j in range(self.agents): 
@@ -209,7 +211,7 @@ class Scene:
                     self.flock(self.agentArray[j])
                     # if prey flocking it can alert surrounding prey to predator    
                     self.alertPrey(self.agentArray[j])
-                elif self.agentArray[j].flockFlag == False and  self.agentArray[j].predator == False:
+                elif se;f.wander == True and self.agentArray[j].flockFlag == False and  self.agentArray[j].predator == False :
                     self.idlePrey(self.agentArray[j])
                 
                 
@@ -235,7 +237,7 @@ class Scene:
 	            # UPDATING VELOCITY, POSITION AND ROTATION
                 
                 # limit velocity to 0.8 (1 is max)
-                self.agentArray[j].limitVel(0.8) 
+                self.agentArray[j].limitVel(0.6) 
                 
 	            # update the position of all the balls following their current velocity
                 self.agentArray[j].position[0] += self.agentArray[j].velocity[0]
@@ -312,7 +314,7 @@ class Scene:
     	    # only flock with other flocking boids
     	    if agent != currentAgent:
     	        if agent.flockFlag == True:
-        	        if currentAgent.distanceToAgent(agent) < 3:
+        	        if currentAgent.distanceToAgent(agent) < 2:
         	            
         	            alignmentVector[0] += agent.velocity[0]
         	            # ignore y axis    	                
@@ -370,21 +372,23 @@ class Scene:
     def computeSeperation(self, currentAgent):
         numberOfNeighbours = 0
         seperationVector = [0,0,0]
-    	steer = [0,0,0]    
+    	steer = [0,0,0]
+    	
+    	diff = [0,0,0]    
         for agent in self.preyArray:
             if agent != currentAgent:
                 if agent.flockFlag == True:
                     if currentAgent.distanceToAgent(agent) <1.0:
                         
-                        seperationVector[0] += agent.position[0]-currentAgent.position[0]
+                        diff[0] = agent.position[0]-currentAgent.position[0]
                         # ignore y axis    	                
-                        seperationVector[2] += agent.position[2]-currentAgent.position[2]
+                        diff[2] = agent.position[2]-currentAgent.position[2]
                         
-                        seperationVector = normalizeVector(seperationVector)
+                        diff = normalizeVector(diff)
                         
                         # -2 so that distance is zero at edge of cone
-                        seperationVector[0] /= (currentAgent.distanceToAgent(agent)-0.4)
-                        seperationVector[2] /= (currentAgent.distanceToAgent(agent)-0.4)   
+                        seperationVector[0] += diff[0] / (currentAgent.distanceToAgent(agent))
+                        seperationVector[2] += diff[2] / (currentAgent.distanceToAgent(agent))   
                         
                         numberOfNeighbours += 1
         
@@ -476,7 +480,7 @@ class Scene:
         target = [0,0,0]
         targetDist = 2
         targetRadius = 0.3
-        angle = (rand.random()- rand.random())*60.0
+        angle = (rand.random()- rand.random())*20.0
         
         turn = [0,0,0]
         facing =[1,0,0]
@@ -489,8 +493,8 @@ class Scene:
         # radians to degrees
         turning = turning * (180/PI)
         
-        if currentAgent.velocity[2] <0:
-            turning +=180
+        #if currentAgent.velocity[2] >0:
+            #turning += 360 -turning
             
         angle = angle + turning     
         
@@ -527,24 +531,30 @@ class Scene:
 
         currentAgent.velocity = normalizeVector(currentAgent.velocity)
         
-        
-        
-        """numberOfNeighbours = 0
+        # seperate
+      
+        numberOfNeighbours = 0
         seperationVector = [0,0,0]
+        
+        diff = [0,0,0]
     	  
         for agent in self.preyArray:
             if agent != currentAgent:               
-                if currentAgent.distanceToAgent(agent) <2.0:
+                if currentAgent.distanceToAgent(agent) <1.5:
+                 
                     
-                    seperationVector[0] += agent.position[0]-currentAgent.position[0]
+                    diff[0] = agent.position[0] - currentAgent.position[0]
                     # ignore y axis    	                
-                    seperationVector[2] += agent.position[2]-currentAgent.position[2]
+                    diff[2] = agent.position[2] - currentAgent.position[2]
                     
-                    seperationVector = normalizeVector(seperationVector)
+                    diff = normalizeVector(diff)
+                    
+                    #seperationVector[0] += diff[0]
+                    #seperationVector[2] += diff[2]
                     
                     # -2 so that distance is zero at edge of cone
-                    seperationVector[0] /= (currentAgent.distanceToAgent(agent)-0.4)
-                    seperationVector[2] /= (currentAgent.distanceToAgent(agent)-0.4)   
+                    seperationVector[0] += diff[0] / (currentAgent.distanceToAgent(agent))
+                    seperationVector[2] += diff[2] / (currentAgent.distanceToAgent(agent))   
                     
                     numberOfNeighbours += 1
         
@@ -556,26 +566,21 @@ class Scene:
             seperationVector[2] *= -1;
         
             seperationVector = normalizeVector(seperationVector)
-            
+
            
             steer = self.steer(currentAgent, seperationVector)           
             
-            currentAgent.velocity += steer*2
-        
-            currentAgent.velocity = normalizeVector(currentAgent.velocity)"""
-        
-        currentAgent.limitVel(0.1)
-        
-  
+
+           
+            currentAgent.velocity[0] += steer[0]*2
+            currentAgent.velocity[2] += steer[2]*2
             
+
             
-            
-            
-            #currentAgent.velocity = normalizeVector(currentAgent.velocity)
+            currentAgent.velocity = normalizeVector(currentAgent.velocity)
         
-        
-    
-              
+        currentAgent.limitVel(0.05)
+                 
         
             
                                         	
@@ -605,8 +610,8 @@ if __name__ == "__main__":
     cmds.select(all=True)
     cmds.delete()
     
-    numberOfPrey = 10
-    numberOfPredators = 0
+    numberOfPrey = 80
+    numberOfPredators = 1
     
     boidsRadius = 0.2
     
