@@ -51,7 +51,7 @@ class Agent:
 
          # if predator spawn outside main group of prey (makes more interesting flocking)
          if self.predator == True:
-             self.position = [-20,0.2,25]
+             self.position = [- rand.random()*40,0.2,rand.random()*25]
          
          # create boid geometry
          cmds.polyCone(n = id, r = self.radius, h = 0.8, axis = (0,0,1))
@@ -120,7 +120,7 @@ class Agent:
          
 # Class contains behavour of boids and methods for simulating         
 class Scene:
-    def __init__(self, preyAgents, predatorAgents):
+    def __init__(self, preyAgents, predatorAgents, boidRadius):
         # number of prey boids
         self.preyAgents = preyAgents
         # number of predator boids
@@ -133,17 +133,19 @@ class Scene:
         self.preyArray = []
         # array of predator boids, used for predator detection
         self.predatorArray = []
+        
+        self.boidRadius = boidRadius
                
     # creates boids by creating objects of the boids class    
     def populateScene(self):  
         #init prey             
         for i in range(0,self.preyAgents):
-            currentAgent = Agent("agentPrey" + str(i), 0.2, False)
+            currentAgent = Agent("agentPrey" + str(i), self.boidRadius, False)
             self.agentArray.append(currentAgent)
             self.preyArray.append(currentAgent)
         # init predators
         for i in range(0,self.predatorAgents):
-            currentAgent = Agent("agentPredator" + str(i), 0.4, True)
+            currentAgent = Agent("agentPredator" + str(i), self.boidRadius + 0.2, True)
             self.agentArray.append(currentAgent)
             self.predatorArray.append(currentAgent)
         
@@ -158,7 +160,7 @@ class Scene:
        
     
     # simulate behaviour keyframe boids position and rotation    
-    def simulation(self, ballRadius, agentArray):
+    def simulation(self):
         # number of frames
         maxFrame = 120
         cmds.playbackOptions(minTime=1, maxTime = maxFrame, animationStartTime=1, animationEndTime = maxFrame)
@@ -535,6 +537,7 @@ def normalizeVector(v):
         if sum !=0:
             v[i]/=sum
     return v
+    
 # returns the dot product of two vectors    
 def dotProduct(V1, V2):
 	return V1[0]*V2[0]+V1[1]*V2[1]+V1[2]*V2[2]
@@ -545,16 +548,16 @@ if __name__ == "__main__":
     cmds.delete()
     
     numberOfPrey = 80
-    numberOfPredators = 1
+    numberOfPredators = 2
     
     boidsRadius = 0.2
     
     # create scenes
-    scene = Scene(numberOfPrey, numberOfPredators)  
+    scene = Scene(numberOfPrey, numberOfPredators, boidsRadius)  
     
     # populate scene
     scene.populateScene()
     
     # simulate scene
-    scene.simulation(boidsRadius, scene.agentArray)
+    scene.simulation()
     
